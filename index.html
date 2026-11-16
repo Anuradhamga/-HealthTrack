@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HealthTrack | Health Analytics Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <span>✚</span>
+                <h2>HealthTrack</h2>
+            </div>
+
+            <nav>
+                <a href="#" class="nav-link active">▦ Dashboard</a>
+                <a href="#patients" class="nav-link">♙ Patients</a>
+                <a href="#records" class="nav-link">♥ Health Records</a>
+                <a href="#analytics" class="nav-link">▥ Analytics</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>HealthTrack v1.0</p>
+                <small>Personal Health Analytics</small>
+            </div>
+
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <header class="topbar">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Welcome to your health analytics overview.</p>
+                </div>
+
+                <div class="profile">
+                    <div class="avatar">A</div>
+                    <div>
+                        <strong>Administrator</strong>
+                        <small>Health Manager</small>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Statistics -->
+            <section class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">♙</div>
+                    <p>Total Patients</p>
+                    <h2 id="totalPatients">0</h2>
+                    <small>Registered patients</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">♥</div>
+                    <p>Health Records</p>
+                    <h2 id="totalRecords">0</h2>
+                    <small>Recorded measurements</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">⚖</div>
+                    <p>Average BMI</p>
+                    <h2 id="averageBMI">0.0</h2>
+                    <small>Based on available records</small>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">◷</div>
+                    <p>Recent Records</p>
+                    <h2 id="recentRecords">0</h2>
+                    <small>Records added today</small>
+                </div>
+
+            </section>
+
+            <!-- Analytics -->
+            <section class="analytics-section" id="analytics">
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Health Analytics</h2>
+                        <p>Health measurement overview</p>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="healthChart"></canvas>
+                </div>
+
+            </section>
+
+            <!-- Patients -->
+            <section class="patients-section" id="patients">
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Patient Management</h2>
+                        <p>Manage registered patient information</p>
+                    </div>
+
+                    <button class="primary-btn" id="addPatientBtn">
+                        + Add Patient
+                    </button>
+                </div>
+
+                <input
+                    type="text"
+                    id="searchPatient"
+                    class="search-input"
+                    placeholder="Search patients..."
+                >
+
+                <div class="table-wrapper">
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Contact</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="patientTable">
+                        </tbody>
+                    </table>
+
+                </div>
+
+            </section>
+
+            <!-- Health Records -->
+            <section class="records-section" id="records">
+
+                <div class="section-heading">
+                    <div>
+                        <h2>Recent Health Records</h2>
+                        <p>Latest recorded health measurements</p>
+                    </div>
+
+                    <button class="secondary-btn" id="addRecordBtn">
+                        + Add Record
+                    </button>
+                    <button id="exportRecordsBtn" class="export-btn">
+    Export CSV
+</button>
+<button id="printRecordsBtn" class="print-btn">
+    Print Report
+</button>
+<!-- Health Records Date Filter -->
+
+<div class="date-filter">
+
+    <label for="recordDateFilter">Filter by Date:</label>
+
+    <input type="date" id="recordDateFilter">
+
+    <button id="clearDateFilter" type="button">
+        Clear Filter
+    </button>
+
+</div>
+                </div>
+
+                <div class="table-wrapper">
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Blood Pressure</th>
+                                <th>Heart Rate</th>
+                                <th>Temperature</th>
+                               <th>BMI</th>
+<th>BMI Category</th>
+<th>Date</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="recordTable">
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+
+            <footer>
+                <p>© 2026 HealthTrack | Educational Project</p>
+            </footer>
+
+        </main>
+
+    </div>
+    <!-- Health Record Modal -->
+
+<div class="modal-overlay" id="recordModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <div>
+                <h2>Add Health Record</h2>
+                <p>Enter patient health measurements.</p>
+            </div>
+
+            <button type="button" class="close-btn" id="closeRecordModal">
+                &times;
+            </button>
+        </div>
+
+        <form id="recordForm">
+
+            <div class="form-group">
+                <label>Select Patient</label>
+                <select id="recordPatient" required>
+                    <option value="">Choose Patient</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Systolic BP (mmHg)</label>
+                    <input type="number" id="systolic" min="50" max="300" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Diastolic BP (mmHg)</label>
+                    <input type="number" id="diastolic" min="30" max="200" required>
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Heart Rate (BPM)</label>
+                    <input type="number" id="heartRate" min="20" max="250" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Temperature (°C)</label>
+                    <input type="number" id="temperature" min="25" max="45" step="0.1" required>
+                </div>
+
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="weight" min="0.1" max="500" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Height (cm)</label>
+                    <input type="number" id="height" min="1" max="300" step="0.1" required>
+                </div>
+
+            </div>
+
+            <div class="modal-actions">
+
+                <button type="button" class="cancel-btn" id="cancelRecord">
+                    Cancel
+                </button>
+
+                <button type="submit" class="primary-btn">
+                    Save Record
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+<!-- Patient Registration Modal -->
+
+<div class="modal-overlay" id="patientModal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+            <div>
+                <h2>Add New Patient</h2>
+                <p>Enter patient information below.</p>
+            </div>
+
+            <button type="button" class="close-btn" id="closePatientModal">
+                &times;
+            </button>
+        </div>
+
+        <form id="patientForm">
+
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="patientName"
+                       placeholder="Enter full name" required>
+            </div>
+
+            <div class="form-row">
+
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="patientAge"
+                           placeholder="Age" min="1" max="120" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="patientGender" required>
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="form-group">
+                <label>Contact Number</label>
+                <input type="tel" id="patientContact"
+                       placeholder="Enter contact number" required>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="cancel-btn" id="cancelPatient">
+                    Cancel
+                </button>
+
+                <button type="submit" class="primary-btn">
+                    Save Patient
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+    <script src="script.js"></script>
+
+</body>
+</html>
+               
