@@ -13,6 +13,13 @@ HealthTrack is a web-based healthcare management and analytics project developed
 The application provides a simple dashboard for managing patient profiles, recording health measurements, monitoring Body Mass Index (BMI), and visualizing health-related data through interactive charts.
 
 The project demonstrates the practical application of frontend web development, data visualization, and browser-based data storage in the healthcare technology domain.
+## 📸 Dashboard Preview
+
+### Main Dashboard
+![HealthTrack Dashboard](screenshots/dashboard.png)
+
+### Health Analytics
+![HealthTrack Analytics](screenshots/analytics.png)
 
 ## ✨ Key Features
 
