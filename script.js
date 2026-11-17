@@ -2,9 +2,22 @@
 // HEALTHTRACK - HEALTH ANALYTICS SYSTEM
 // ======================================
 
-// Load saved data
-let patients = JSON.parse(localStorage.getItem("healthPatients")) || [];
-let records = JSON.parse(localStorage.getItem("healthRecords")) || [];
+// Load saved data safely. LocalStorage is browser-side storage, not secure storage.
+function loadStoredArray(key) {
+    try {
+        const rawValue = localStorage.getItem(key);
+        if (!rawValue) return [];
+
+        const parsedValue = JSON.parse(rawValue);
+        return Array.isArray(parsedValue) ? parsedValue : [];
+    } catch (error) {
+        console.error(`Unable to load ${key}:`, error);
+        return [];
+    }
+}
+
+let patients = loadStoredArray("healthPatients");
+let records = loadStoredArray("healthRecords");
 
 let healthChart = null;
 let selectedRecordDate = "";
@@ -15,8 +28,15 @@ let selectedRecordDate = "";
 
 // Save Data
 function saveData() {
-    localStorage.setItem("healthPatients", JSON.stringify(patients));
-    localStorage.setItem("healthRecords", JSON.stringify(records));
+    try {
+        localStorage.setItem("healthPatients", JSON.stringify(patients));
+        localStorage.setItem("healthRecords", JSON.stringify(records));
+        return true;
+    } catch (error) {
+        console.error("Unable to save HealthTrack data:", error);
+        alert("Your data could not be saved. Browser storage may be unavailable or full.");
+        return false;
+    }
 }
 
 // Generate Patient ID
@@ -26,7 +46,7 @@ function generatePatientID() {
 
 // Safe HTML Output
 function escapeHTML(value) {
-    return String(value).replace(/[&<>"']/g, character => ({
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
@@ -37,15 +57,18 @@ function escapeHTML(value) {
 
 // BMI Category
 function getBMICategory(bmi) {
+    bmi = Number(bmi);
+
+    if (!Number.isFinite(bmi) || bmi <= 0) return "Unknown";
     if (bmi < 18.5) return "Underweight";
     if (bmi < 25) return "Normal";
     if (bmi < 30) return "Overweight";
+
     return "Obese";
 }
 
 // Get Local Date
 function getLocalDateString(dateValue) {
-
     const date = new Date(dateValue);
 
     const year = date.getFullYear();
@@ -54,7 +77,6 @@ function getLocalDateString(dateValue) {
 
     return `${year}-${month}-${day}`;
 }
-
 
 // ======================================
 // PATIENT MANAGEMENT
@@ -65,10 +87,8 @@ const patientForm = document.getElementById("patientForm");
 
 // Open Patient Modal
 document.getElementById("addPatientBtn").addEventListener("click", () => {
-
     patientForm.reset();
     patientModal.classList.add("show");
-
 });
 
 // Close Patient Modal
@@ -84,16 +104,13 @@ document.getElementById("cancelPatient")
 
 // Close when clicking outside
 patientModal.addEventListener("click", event => {
-
     if (event.target === patientModal) {
         closePatientModal();
     }
-
 });
 
 // Save Patient
 patientForm.addEventListener("submit", event => {
-
     event.preventDefault();
 
     const name = document.getElementById("patientName").value.trim();
@@ -126,7 +143,6 @@ patientForm.addEventListener("submit", event => {
     patientForm.reset();
 
     alert("Patient registered successfully!");
-
 });
 
 // Display Patients
@@ -171,17 +187,13 @@ function renderPatients(searchText = "") {
         `;
 
         table.appendChild(row);
-
     });
-
 }
 
 // Search Patients
 document.getElementById("searchPatient")
     .addEventListener("input", function () {
-
         renderPatients(this.value);
-
     });
 
 // Edit and Delete Patients
@@ -206,9 +218,7 @@ document.getElementById("patientTable")
                 renderRecords();
                 updateDashboard();
                 updateChart();
-
             }
-
         }
 
         if (event.target.classList.contains("edit-btn")) {
@@ -227,7 +237,6 @@ document.getElementById("patientTable")
 
                 alert("Invalid age.");
                 return;
-
             }
 
             const newContact = prompt("Enter new contact:", patient.contact);
@@ -254,7 +263,6 @@ document.getElementById("patientTable")
             updateDashboard();
 
             alert("Patient updated successfully!");
-
         }
 
     });
@@ -276,7 +284,6 @@ document.getElementById("addRecordBtn")
 
             alert("Please register a patient first.");
             return;
-
         }
 
         recordForm.reset();
@@ -291,11 +298,9 @@ document.getElementById("addRecordBtn")
             option.textContent = patient.name + " (" + patient.id + ")";
 
             recordPatient.appendChild(option);
-
         });
 
         recordModal.classList.add("show");
-
     });
 
 // Close Record Modal
@@ -330,7 +335,6 @@ recordForm.addEventListener("submit", event => {
 
         alert("Please select a valid patient.");
         return;
-
     }
 
     const systolic = Number(document.getElementById("systolic").value);
@@ -351,7 +355,6 @@ recordForm.addEventListener("submit", event => {
 
         alert("Please enter valid health measurements.");
         return;
-
     }
 
     const bmi = weight / ((height / 100) ** 2);
@@ -426,7 +429,6 @@ function renderRecords() {
         `;
 
         return;
-
     }
 
     // Display Records
@@ -440,10 +442,10 @@ function renderRecords() {
 
         row.innerHTML = `
             <td>${escapeHTML(record.patientName)}</td>
-            <td>${record.systolic}/${record.diastolic} mmHg</td>
-            <td>${record.heartRate} BPM</td>
-            <td>${record.temperature} °C</td>
-            <td>${record.bmi}</td>
+            <td>${escapeHTML(record.systolic)}/${escapeHTML(record.diastolic)} mmHg</td>
+            <td>${escapeHTML(record.heartRate)} BPM</td>
+            <td>${escapeHTML(record.temperature)} °C</td>
+            <td>${escapeHTML(record.bmi)}</td>
             <td>
                 <span class="bmi-badge ${category.toLowerCase()}">
                     ${category}
@@ -598,16 +600,28 @@ function updateChart() {
 // EXPORT HEALTH RECORDS TO CSV
 // ======================================
 
+// Escape CSV cells and neutralize spreadsheet formula injection in text fields.
+function escapeCSVValue(value, protectFormula = false) {
+
+    let text = String(value ?? "");
+
+    if (protectFormula && /^[\u0000-\u0020]*[=+\-@]/.test(text)) {
+        text = "'" + text;
+    }
+
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
 function exportRecordsToCSV() {
 
     if (records.length === 0) {
 
         alert("No health records available to export.");
         return;
-
     }
 
     const headers = [
+
         "Patient Name",
         "Systolic BP",
         "Diastolic BP",
@@ -618,34 +632,40 @@ function exportRecordsToCSV() {
         "BMI",
         "BMI Category",
         "Date"
+
     ];
 
     const rows = records.map(record => [
 
-        record.patientName,
-        record.systolic,
-        record.diastolic,
-        record.heartRate,
-        record.temperature,
-        record.weight,
-        record.height,
-        record.bmi,
-        getBMICategory(record.bmi),
-        new Date(record.date).toLocaleDateString()
+        { value: record.patientName, protectFormula: true },
+        { value: record.systolic },
+        { value: record.diastolic },
+        { value: record.heartRate },
+        { value: record.temperature },
+        { value: record.weight },
+        { value: record.height },
+        { value: record.bmi },
+        { value: getBMICategory(Number(record.bmi)) },
+        { value: new Date(record.date).toLocaleDateString() }
 
     ]);
 
-    const csvContent = [headers, ...rows]
-        .map(row =>
-            row.map(value =>
-                `"${String(value ?? "").replace(/"/g, '""')}"`
-            ).join(",")
-        )
-        .join("\n");
+    const csvContent = [
+
+        headers.map(value => escapeCSVValue(value)),
+
+        ...rows.map(row => row.map(cell =>
+            escapeCSVValue(cell.value, cell.protectFormula === true)
+        ))
+
+    ].map(row => row.join(",")).join("\n");
 
     const blob = new Blob(
+
         ["\uFEFF" + csvContent],
+
         { type: "text/csv;charset=utf-8;" }
+
     );
 
     const url = URL.createObjectURL(blob);
@@ -653,6 +673,7 @@ function exportRecordsToCSV() {
     const link = document.createElement("a");
 
     link.href = url;
+
     link.download = "HealthTrack_Health_Records.csv";
 
     document.body.appendChild(link);
@@ -681,7 +702,6 @@ function printHealthReport() {
 
         alert("No health records available to print.");
         return;
-
     }
 
     const printWindow = window.open("", "_blank");
@@ -690,21 +710,29 @@ function printHealthReport() {
 
         alert("Please allow pop-ups to print the report.");
         return;
+    }
 
+    // Prevent the opened print window from accessing this page through window.opener.
+    try {
+        printWindow.opener = null;
+    } catch (error) {
+        console.warn("Could not reset print window opener:", error);
     }
 
     const tableRows = [...records].reverse().map(record => `
 
         <tr>
+
             <td>${escapeHTML(record.patientName)}</td>
-            <td>${record.systolic}/${record.diastolic} mmHg</td>
-            <td>${record.heartRate} BPM</td>
-            <td>${record.temperature} °C</td>
-            <td>${record.weight} kg</td>
-            <td>${record.height} cm</td>
-            <td>${record.bmi}</td>
-            <td>${getBMICategory(record.bmi)}</td>
-            <td>${new Date(record.date).toLocaleDateString()}</td>
+            <td>${escapeHTML(record.systolic)}/${escapeHTML(record.diastolic)} mmHg</td>
+            <td>${escapeHTML(record.heartRate)} BPM</td>
+            <td>${escapeHTML(record.temperature)} °C</td>
+            <td>${escapeHTML(record.weight)} kg</td>
+            <td>${escapeHTML(record.height)} cm</td>
+            <td>${escapeHTML(record.bmi)}</td>
+            <td>${escapeHTML(getBMICategory(Number(record.bmi)))}</td>
+            <td>${escapeHTML(new Date(record.date).toLocaleDateString())}</td>
+
         </tr>
 
     `).join("");
@@ -792,6 +820,7 @@ function printHealthReport() {
                 <thead>
 
                     <tr>
+
                         <th>Patient</th>
                         <th>Blood Pressure</th>
                         <th>Heart Rate</th>
@@ -801,18 +830,23 @@ function printHealthReport() {
                         <th>BMI</th>
                         <th>BMI Category</th>
                         <th>Date</th>
+
                     </tr>
 
                 </thead>
 
                 <tbody>
+
                     ${tableRows}
+
                 </tbody>
 
             </table>
 
             <div class="footer">
+
                 <p>© 2026 HealthTrack | Educational Project</p>
+
             </div>
 
             <script>
